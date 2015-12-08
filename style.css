@@ -1,0 +1,11 @@
+body {
+  font: 300 14px/1.4 "Fira Sans", "Open Sans", Sans-Serif;
+  background: #eee;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  background: #444;
+  transform: rotateZ( 180deg ) rotateY( 180deg );
+}
