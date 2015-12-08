@@ -4,64 +4,75 @@ var ctx = canvas.getContext( '2d' );
 canvas.width = canvas.offsetWidth;
 canvas.height = canvas.offsetHeight;
 
-// define player
-var player = {
-  size: 20,
-  position: {
-    x: canvas.width/2,
-    y: canvas.height/2
-  },
-  dead: false,
-  score: {
-    current: 0,
-    high: window.localStorage.getItem( 'highscore' ) || 0
-  },
-  color: 'tomato'
-};
-
+// get score display elements
 var currentScore = document.getElementById( 'currentScore' );
 var highScore = document.getElementById( 'highScore' );
 
-// store obstacles
+// define player and inital states
+var player = {
+  width: 20,
+  position: {
+    x: canvas.width / 2,
+    y: canvas.height / 2
+  },
+  dead: false,
+  highscore: window.localStorage.getItem( 'highscore' ) || 0,
+  color: 'tomato'
+};
+
+// create obstacle store
 var obstacles = [];
 
-// create obstacles on random timer
-setTimeout( function generateObstacle() {
-  var obstacleWidth = Math.random() * ( player.size * 2 );
-  obstacles.push( {
-    width: obstacleWidth,
-    height: Math.random() * ( canvas.height * 0.8 ),
-    position: -obstacleWidth,
-    invert: ( Math.random() >= 0.5 ),
-    color: '#eee'
-  } );
+// define playing field and inital states
+var field = {
+  minGap: player.width * 2,
+  maxGap: canvas.width * 0.25,
+  speed: 1,
+  distanceTravelled: 0,
+  distanceToNextObstacle: 0
+};
 
-  setTimeout( generateObstacle, 2000 - ( player.score.current / 20 ) );
-}, 2000 );
+// // create obstacles on random timer
+// setTimeout( function generateObstacle() {
+//   var obstacleWidth = Math.random() * ( player.size * 2 );
+//   obstacles.push( {
+//     width: obstacleWidth,
+//     height: Math.random() * ( canvas.height * 0.8 ),
+//     position: -obstacleWidth,
+//     invert: ( Math.random() >= 0.5 ),
+//     color: '#eee'
+//   } );
+//
+//   setTimeout( generateObstacle, 2000 - ( player.score.current / 20 ) );
+// }, 2000 );
 
 // detect collisions
 function collisionTest( obstacle ) {
-  // obstacle top left
+  // obstacle top left point
   var p1 = {
     x: obstacle.position,
     y: obstacle.invert ? canvas.height : obstacle.height
   };
-  // obstacle bottom right
+
+  // obstacle bottom right point
   var p2 = {
     x: obstacle.position + obstacle.width,
     y: obstacle.invert ? canvas.height - obstacle.height : 0
   };
-  // player top left
+
+  // player top left point
   var p3 = {
-    x: player.position.x - (player.size/2),
-    y: player.position.y + (player.size/2)
-  };
-  // player bottom right
-  var p4 = {
-    x: player.position.x + (player.size/2),
-    y: player.position.y - (player.size/2)
+    x: player.position.x - ( player.width / 2 ),
+    y: player.position.y + ( player.width / 2 )
   };
 
+  // player bottom right point
+  var p4 = {
+    x: player.position.x + ( player.width / 2 ),
+    y: player.position.y - ( player.width / 2 )
+  };
+
+  // detect collision between two rectangles
   if( p1.x > p4.x || p3.x > p2.x ) {
     return false;
   }
@@ -74,15 +85,33 @@ function collisionTest( obstacle ) {
 }
 
 // main loop
-(function animateLoop() {
+(function loop() {
   // clear canvas for redraw
   ctx.fillStyle = '#444';
   ctx.fillRect( 0, 0, canvas.width, canvas.height );
 
-  // draw all obstacles
+  // decrease distance to next obstacle
+  field.distanceToNextObstacle -= Math.floor( field.speed );
+
+  // generate obstacle if needed
+  if( field.distanceToNextObstacle <= 0 ) {
+    var obstacleWidth = 2 + ( Math.random() * player.width * 2 );
+    obstacles.push( {
+      width: obstacleWidth,
+      height: Math.random() * ( canvas.height * 0.8 ),
+      position: -obstacleWidth,
+      invert: ( Math.random() >= 0.5 ),
+      color: '#eee'
+    } );
+
+    // gernetate a new distance for a new obstacle
+    field.distanceToNextObstacle = Math.floor( Math.random() * ( field.maxGap - field.minGap + 1 ) ) + field.minGap + obstacleWidth;
+  }
+
+  // draw all current obstacles
   obstacles.forEach( function( obstacle, idx ) {
     // move current obstacle fwd
-    obstacle.position += player.score.current / 2000  + 1;
+    obstacle.position += field.speed;
 
     // draw obstacle
     ctx.beginPath();
@@ -111,27 +140,48 @@ function collisionTest( obstacle ) {
 
   // draw player
   ctx.beginPath();
-  ctx.rect( player.position.x - player.size/2, player.position.y - player.size/2, player.size, player.size );
+  ctx.rect( player.position.x - ( player.width / 2 ), player.position.y - ( player.width / 2 ), player.width, player.width );
   ctx.fillStyle = player.color;
   ctx.fill();
   ctx.closePath();
 
-  // update scores
-  player.score.high = Math.max( player.score.high, ++player.score.current );
-  currentScore.textContent = player.score.current;
-  highScore.textContent = player.score.high;
+  // update player scores
+  player.highscore = Math.max( player.highscore, ++field.distanceTravelled );
+  currentScore.textContent = field.distanceTravelled;
+  highScore.textContent = player.highscore;
+
+  // increase field speed
+  field.speed = 1 + ( field.distanceTravelled / 1000 );
 
   // determine if gameplay continues or ends
   if( !player.dead ) {
-    window.requestAnimationFrame( animateLoop );
+    // continue gameplay
+    window.requestAnimationFrame( loop );
   }
   else {
-    window.localStorage.setItem( 'highscore', player.score.high );
-    window.alert( 'You are dead!' );
-    player.score.current = 0;
+    // end gameplay
+    // store highscore
+    window.localStorage.setItem( 'highscore', player.highscore );
+
+    // reset the field
+    field = {
+      minGap: player.width * 2,
+      maxGap: canvas.width * 0.25,
+      speed: 1,
+      distanceTravelled: 0,
+      distanceToNextObstacle: ( canvas.width / 2 ) - ( player.width / 2 )
+    };
+
+    // clear all obstacles
     obstacles = [];
-    player.position.y = 10;
+
+    // reset player status
     player.dead = false;
-    window.requestAnimationFrame( animateLoop );
+
+    // inform player of restart
+    window.alert( 'You are dead! Game will now restart.');
+
+    // start new game
+    window.requestAnimationFrame( loop );
   }
 }());
