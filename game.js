@@ -32,20 +32,6 @@ var field = {
   distanceToNextObstacle: 0
 };
 
-// // create obstacles on random timer
-// setTimeout( function generateObstacle() {
-//   var obstacleWidth = Math.random() * ( player.size * 2 );
-//   obstacles.push( {
-//     width: obstacleWidth,
-//     height: Math.random() * ( canvas.height * 0.8 ),
-//     position: -obstacleWidth,
-//     invert: ( Math.random() >= 0.5 ),
-//     color: '#eee'
-//   } );
-//
-//   setTimeout( generateObstacle, 2000 - ( player.score.current / 20 ) );
-// }, 2000 );
-
 // detect collisions
 function collisionTest( obstacle ) {
   // obstacle top left point
@@ -85,7 +71,7 @@ function collisionTest( obstacle ) {
 }
 
 // main loop
-(function loop() {
+function loop() {
   // clear canvas for redraw
   ctx.fillStyle = '#444';
   ctx.fillRect( 0, 0, canvas.width, canvas.height );
@@ -169,7 +155,7 @@ function collisionTest( obstacle ) {
       maxGap: canvas.width * 0.25,
       speed: 1,
       distanceTravelled: 0,
-      distanceToNextObstacle: ( canvas.width / 2 ) - ( player.width / 2 )
+      distanceToNextObstacle: 0
     };
 
     // clear all obstacles
@@ -179,9 +165,21 @@ function collisionTest( obstacle ) {
     player.dead = false;
 
     // inform player of restart
-    window.alert( 'You are dead! Game will now restart.');
+    window.alert( 'You are dead! Click to restart.');
 
     // start new game
-    window.requestAnimationFrame( loop );
+    canvas.addEventListener( 'click', function( event ) {
+      player.position.x = event.offsetX;
+      player.position.y = event.offsetY;
+      loop();
+      this.removeEventListener( 'click', arguments.callee );
+    } );
   }
-}());
+}
+
+canvas.addEventListener( 'click', function( event ) {
+  player.position.x = event.offsetX;
+  player.position.y = event.offsetY;
+  loop();
+  this.removeEventListener( 'click', arguments.callee );
+} );
